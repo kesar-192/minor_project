@@ -1,0 +1,37 @@
+# SecureAgent Vault policy.
+#
+# The gateway re-reads this file whenever it changes. Setting an agent's status
+# to suspended takes effect on its very next request (the kill switch).
+# If this file has an error, the gateway refuses every request until it is fixed.
+#
+# Always quote amounts and addresses. Unquoted, YAML turns 0.1 into a float
+# and an 0x... address into a huge integer, and the gateway will reject them.
+
+agents:
+  crypto-agent:
+    status: active                  # active | suspended
+
+    # SHA-256 of the agent's session token, never the token itself.
+    # Make a token with: .venv/bin/python scripts/new_agent_token.py
+    token_sha256: ""
+
+    allowed_tools:
+      - get_balance
+      - propose_transfer
+      - get_transaction_status
+      - get_policy_status
+
+    # Add USDC once Member 4 deploys a mock USDC token on Anvil (open point 2).
+    allowed_assets: [ETH]
+
+    allowed_recipients:
+      Alice: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"   # Anvil test account #1
+      Bob: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"     # Anvil test account #2
+
+    limits:                         # counted on the true cost: amount + gas
+      ETH:
+        max_per_tx: "0.1"
+        daily: "0.5"
+
+restrictions:
+  private_key_export: false         # can never be set to true

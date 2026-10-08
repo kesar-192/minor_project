@@ -1,0 +1,207 @@
+[
+  {
+    "event_id": "0c9f3e1a-7b2d-4f6e-8a1c-5d3b9e7f2a10",
+    "seq": 1,
+    "type": "decision",
+    "timestamp": "2026-10-13T10:15:00.123Z",
+    "trace_id": "a3f1c7e2-9b4d-4e6a-8c2f-1d7b5e9a3c40",
+    "agent_id": "crypto-agent",
+    "tool": "propose_transfer",
+    "args": {
+      "asset": "ETH",
+      "amount": "0.05",
+      "recipient": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    },
+    "decision": "ALLOW",
+    "gate": null,
+    "gate_number": null,
+    "gate_label": null,
+    "reason_code": null,
+    "reason": "Sent 0.05 ETH to Alice. All 6 gates passed.",
+    "severity": "info",
+    "checks": [
+      {
+        "gate": "request_format",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "gate": "identity",
+        "passed": true,
+        "detail": "crypto-agent is active"
+      },
+      {
+        "gate": "permitted_tools",
+        "passed": true,
+        "detail": "propose_transfer is allowed"
+      },
+      {
+        "gate": "allowed_assets",
+        "passed": true,
+        "detail": "ETH is approved"
+      },
+      {
+        "gate": "recipient_allowlist",
+        "passed": true,
+        "detail": "Alice (0x7099…79C8) is approved"
+      },
+      {
+        "gate": "balance",
+        "passed": true,
+        "detail": "0.050042 ETH needed, 10 ETH available"
+      },
+      {
+        "gate": "limits",
+        "passed": true,
+        "detail": "0.050042 ETH is within 0.1 ETH per transaction, 0.050042 of 0.5 ETH used in 24 hours"
+      }
+    ],
+    "tx_hash": "0xf8325ba380b2ab181ea9ae9de56a4fc06c2a12e30019c01e1fd21be8c4c29b89",
+    "tx_status": "submitted",
+    "audit_hash": "8f32e7d66692d0e708e90729abd04382d60701ac74b0a2a0f883a63144fbe153"
+  },
+  {
+    "event_id": "5e2b8d4f-1a6c-4b9e-9d3f-7c0a2e5b8f21",
+    "seq": 2,
+    "type": "decision",
+    "timestamp": "2026-10-13T10:15:20.456Z",
+    "trace_id": "b8e2d4f6-1a3c-4b5d-9e7f-2c4a6e8b0d51",
+    "agent_id": "crypto-agent",
+    "tool": "propose_transfer",
+    "args": {
+      "asset": "ETH",
+      "amount": "5",
+      "recipient": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    },
+    "decision": "DENY",
+    "gate": "limits",
+    "gate_number": 6,
+    "gate_label": "Per-tx & daily limits",
+    "reason_code": "LIMIT_PER_TX",
+    "reason": "5.000042 ETH including gas is over the 0.1 ETH per-transaction limit",
+    "severity": "warning",
+    "checks": [
+      {
+        "gate": "request_format",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "gate": "identity",
+        "passed": true,
+        "detail": "crypto-agent is active"
+      },
+      {
+        "gate": "permitted_tools",
+        "passed": true,
+        "detail": "propose_transfer is allowed"
+      },
+      {
+        "gate": "allowed_assets",
+        "passed": true,
+        "detail": "ETH is approved"
+      },
+      {
+        "gate": "recipient_allowlist",
+        "passed": true,
+        "detail": "0x7099…79C8 is approved"
+      },
+      {
+        "gate": "balance",
+        "passed": true,
+        "detail": "5.000042 ETH needed, 9.949958 ETH available"
+      },
+      {
+        "gate": "limits",
+        "passed": false,
+        "detail": "5.000042 ETH > 0.1 ETH per transaction"
+      }
+    ],
+    "tx_hash": null,
+    "tx_status": null,
+    "audit_hash": "d8bf2e2835034a4dff3eea442c6ad5b6568f7a36a9d6ecefbb3de083ed3e2997"
+  },
+  {
+    "event_id": "9a7c1e3b-5d2f-4a8e-b6c0-3e9d1f7a5b32",
+    "seq": 3,
+    "type": "decision",
+    "timestamp": "2026-10-13T10:15:41.789Z",
+    "trace_id": "c5d7f9a1-3b5e-4c7d-8f9a-4e6c8a0b2d62",
+    "agent_id": "crypto-agent",
+    "tool": "propose_transfer",
+    "args": {
+      "asset": "BTC",
+      "amount": "0.05",
+      "recipient": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    },
+    "decision": "DENY",
+    "gate": "allowed_assets",
+    "gate_number": 3,
+    "gate_label": "Allowed assets",
+    "reason_code": "ASSET_NOT_ALLOWED",
+    "reason": "BTC is not an approved asset (allowed: ETH)",
+    "severity": "warning",
+    "checks": [
+      {
+        "gate": "request_format",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "gate": "identity",
+        "passed": true,
+        "detail": "crypto-agent is active"
+      },
+      {
+        "gate": "permitted_tools",
+        "passed": true,
+        "detail": "propose_transfer is allowed"
+      },
+      {
+        "gate": "allowed_assets",
+        "passed": false,
+        "detail": "BTC is not in [ETH]"
+      }
+    ],
+    "tx_hash": null,
+    "tx_status": null,
+    "audit_hash": "69a718d3180d7e54618e0ecafc643db246227f6ec487f8dc3dd11d2dfcc7a9a6"
+  },
+  {
+    "event_id": "b1e0c6d2-5f4a-4b8e-9c3d-2a7f1e6b9d04",
+    "seq": 4,
+    "type": "decision",
+    "timestamp": "2026-10-13T10:16:02.481Z",
+    "trace_id": "d4a7e9b1-6c2f-4e8a-b3d5-7f1c9e2a4b60",
+    "agent_id": "crypto-agent",
+    "tool": "export_private_key",
+    "args": {},
+    "decision": "DENY",
+    "gate": "permitted_tools",
+    "gate_number": 2,
+    "gate_label": "Permitted tools",
+    "reason_code": "KEY_EXPORT_DENIED",
+    "reason": "The agent asked for the private key. Keys never leave the Vault.",
+    "severity": "critical",
+    "checks": [
+      {
+        "gate": "request_format",
+        "passed": true,
+        "detail": null
+      },
+      {
+        "gate": "identity",
+        "passed": true,
+        "detail": "crypto-agent is active"
+      },
+      {
+        "gate": "permitted_tools",
+        "passed": false,
+        "detail": "export_private_key is a restricted tool"
+      }
+    ],
+    "tx_hash": null,
+    "tx_status": null,
+    "audit_hash": "989585a99b92e96d9badd26158b59d00a125f51e1600fdf4e2881e835039d378"
+  }
+]
