@@ -8,6 +8,7 @@ from phe_logic import (
     dict_to_ciphertext,
     get_public_key
 )
+from balance_store import BalanceError, query_balance, set_balance
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -67,6 +68,17 @@ class DecryptRequest(BaseModel):
 
 class AddRequest(BaseModel):
     values: List[CiphertextData] = Field(min_length=1)
+
+class BalanceSetRequest(BaseModel):
+    requester_id: str
+    asset: str
+    ciphertext: str
+    exponent: int
+    decimals: int = 0
+
+class BalanceQueryRequest(BaseModel):
+    requester_id: str
+    asset: str
 
 
 @app.post("/add")
@@ -165,3 +177,40 @@ def decrypt_result(
         "message": "Decryption successful",
         "decrypted_result": result
     }
+
+
+@app.post("/balance/set")
+def balance_set(
+    request: BalanceSetRequest,
+    x_api_token: str = Header(default="")
+):
+    verify_api_token(x_api_token)
+
+    set_balance(
+        request.requester_id,
+        request.asset,
+        request.ciphertext,
+        request.exponent,
+        request.decimals
+    )
+
+    return {
+        "message": "Balance stored",
+        "asset": request.asset
+    }
+
+
+@app.post("/balance/query")
+def balance_query(
+    request: BalanceQueryRequest,
+    x_api_token: str = Header(default="")
+):
+    verify_api_token(x_api_token)
+
+    try:
+        return query_balance(request.requester_id, request.asset)
+    except BalanceError as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=error.detail
+        )

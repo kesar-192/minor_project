@@ -78,6 +78,21 @@ class FakeSubmitter:
         return self.status
 
 
+class FakePhe:
+    """Stands in for Member 1's PHE service."""
+
+    def __init__(self, value="9.98"):
+        self.value = value
+        self.asked = []
+        self.down = False
+
+    def balance(self, asset):
+        if self.down:
+            raise ConnectionError("PHE unreachable")
+        self.asked.append(asset)
+        return {"asset": asset, "balance": self.value}
+
+
 def make_body(tool="propose_transfer", args=None, **overrides):
     body = {
         "trace_id": str(uuid.uuid4()),
@@ -158,6 +173,11 @@ def submitter():
     return FakeSubmitter()
 
 
+@pytest.fixture
+def phe():
+    return FakePhe()
+
+
 def real_settings(policy_file, **overrides):
     return Settings(stub_mode=False, cors_origins=[], policy_path=policy_file, db_path=":memory:", **overrides)
 
@@ -167,6 +187,18 @@ def real_client(policy_file, chain, signer, submitter):
     app = create_app(real_settings(policy_file), chain=chain, signer=signer, submitter=submitter)
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def real_phe_client(policy_file, chain, signer, submitter, phe):
+    app = create_app(real_settings(policy_file), chain=chain, signer=signer, submitter=submitter, phe=phe)
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def real_phe_send(real_phe_client):
+    return sender(real_phe_client)
 
 
 @pytest.fixture

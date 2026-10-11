@@ -22,6 +22,8 @@ This service implements Paillier Partially Homomorphic Encryption (PHE) for priv
 
 - Client-side encryption and end-to-end addition testing
 
+- Encrypted balance store for `get_balance` (open point 1, demo-seeded)
+
 
 
 ## Files
@@ -36,6 +38,10 @@ This service implements Paillier Partially Homomorphic Encryption (PHE) for priv
 
 - `phe\_test.py` — Tests
 
+- `balance\_store.py` — Encrypted per-(requester, asset) balances
+
+- `seed\_balance.py` — Store a demo balance (open point 1)
+
 - `requirements.txt` — Dependencies
 
 ## Setup
@@ -48,11 +54,24 @@ Set the API token in PowerShell:
 
 `$env:PHE\_API\_TOKEN = "your-local-development-token"`
 
-Start the service from this directory:
+Start the service from this directory on port 8300 (port 8000 is used by the Vault gateway):
 
-`py -m uvicorn main:app --reload`
+`py -m uvicorn main:app --reload --port 8300`
 
-API documentation: `http://127.0.0.1:8000/docs`
+API documentation: `http://127.0.0.1:8300/docs`
+
+## Balance endpoints (get_balance)
+
+The Vault's `get_balance` tool calls these (open point 1) and passes the answer back to the agent unchanged.
+
+- `POST /balance/set` — `{"requester_id", "asset", "ciphertext", "exponent", "decimals"}` stores an encrypted balance. The client encrypts with the public key, so plaintext never reaches this service.
+- `POST /balance/query` — `{"requester_id", "asset"}` decrypts for an authorized requester and returns `{"asset", "balance"}` — a plain decimal string such as `"9.98"`.
+
+Demo seed:
+
+`PHE\_API\_TOKEN=<token> python seed\_balance.py --balance 9.98 --asset ETH`
+
+Balances are demo data kept in memory and are not read from the chain. The chain-fed design for the future is in `vault\_gateway/contracts/CHAIN\_FED\_BALANCE.md`.
 
 ## Test
 

@@ -74,9 +74,24 @@ def test_read_only_tool_runs_gates_1_and_2_only(real_send):
     assert body["result"] == {"tx_hash": "0x" + "ab" * 32, "status": "confirmed"}
 
 
-def test_get_balance_fails_closed_until_phe_is_connected(real_send):
-    # It goes through Member 1's PHE service (open point 1), which isn't connected yet.
+def test_get_balance_fails_closed_when_the_phe_service_is_not_configured(real_send):
+    # No PHE client is injected, so the Vault has no balance source and must refuse.
     body = real_send("get_balance", {"asset": "ETH"})
+    assert (body["decision"], body["reason_code"]) == ("DENY", "EXECUTION_FAILED")
+
+
+def test_get_balance_returns_the_phe_answer(real_phe_send, phe):
+    # Open point 1: the Vault calls the PHE service and passes its answer back unchanged.
+    body = real_phe_send("get_balance", {"asset": "ETH"})
+    assert body["decision"] == "ALLOW"
+    assert body["result"] == {"asset": "ETH", "balance": "9.98"}
+    assert gates_passed(body) == ["request_format", "identity", "permitted_tools"]
+    assert phe.asked == ["ETH"]
+
+
+def test_get_balance_fails_closed_when_the_phe_service_is_unreachable(real_phe_send, phe):
+    phe.down = True
+    body = real_phe_send("get_balance", {"asset": "ETH"})
     assert (body["decision"], body["reason_code"]) == ("DENY", "EXECUTION_FAILED")
 
 

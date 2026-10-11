@@ -19,8 +19,8 @@ from .store import Store
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
-def create_app(settings=None, *, chain=None, signer=None, submitter=None):
-    """Build the app. Tests pass fakes for chain, signer and submitter; normally they come from settings."""
+def create_app(settings=None, *, chain=None, signer=None, submitter=None, phe=None):
+    """Build the app. Tests pass fakes for chain, signer, submitter and PHE; normally they come from settings."""
     settings = settings or load_settings()
     app = FastAPI(title="SecureAgent Vault Gateway", version="0.1.0")
     app.add_middleware(
@@ -31,7 +31,7 @@ def create_app(settings=None, *, chain=None, signer=None, submitter=None):
     )
     store = Store(settings.db_path)
     hub = EventHub(store)
-    gateway = Gateway(settings, store, chain=chain, signer=signer, submitter=submitter)
+    gateway = Gateway(settings, store, chain=chain, signer=signer, submitter=submitter, phe=phe)
     app.state.gateway = gateway
 
     @app.get("/health")

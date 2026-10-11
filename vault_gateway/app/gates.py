@@ -39,6 +39,7 @@ class Ctx:
     policy: Policy | None  # one snapshot per request, so every gate sees the same policy
     chain: Any = None      # read-only chain access (app/chain.py)
     store: Any = None      # spend record (app/store.py)
+    phe: Any = None        # Member 1's PHE service, for get_balance (app/phe.py)
     sender: str | None = None  # the Vault's signing account
     cost: Cost | None = None   # set by gate 5
 
