@@ -107,7 +107,7 @@ function CandleChart({ candles, iv, setIv }) {
     setHover(i >= 0 && i < candles.length ? i : null);
   };
   return (
-    <Card className="chart-card" title="ETH / USD · demo data" right={
+    <Card className="chart-card" title="ETH / USD · simulated prices" right={
       <div className="seg">{Object.keys(CFG).map((k) => <button key={k} className={iv === k ? "on" : ""} onClick={() => setIv(k)}>{k}</button>)}</div>}>
       <div className="px-row">
         <span className="px">${fmt(candles[candles.length - 1].c)}</span>
@@ -128,47 +128,32 @@ function CandleChart({ candles, iv, setIv }) {
   );
 }
 
-/* ---------- FEATURE 2: swaps ---------- */
-const CHAINS = ["Ethereum", "Base", "Arbitrum"];
-function SwapCard({ ethPx, notify }) {
-  const [from, setFrom] = useState("USDC"), [to, setTo] = useState("ETH"), [amt, setAmt] = useState("500"), [chain, setChain] = useState("Ethereum");
-  const px = { ETH: ethPx, USDC: 1, DAI: 1 };
-  const rate = px[from] / px[to], out = (parseFloat(amt) || 0) * rate * 0.997;
-  const flip = () => { setFrom(to); setTo(from); };
-  const sel = (v, set, other) => <select value={v} onChange={(e) => e.target.value === other ? flip() : set(e.target.value)}>{Object.keys(px).map((t) => <option key={t}>{t}</option>)}</select>;
+/* ---------- real transfer: you -> agent -> MCP server -> Vault gateway -> chain ---------- */
+function TransferCard({ events, txs }) {
+  const [to, setTo] = useState("Alice"), [amt, setAmt] = useState("0.05"), [addr, setAddr] = useState(""), [busy, setBusy] = useState(false), [res, setRes] = useState(null);
+  const send = async (e) => {
+    e.preventDefault(); setBusy(true); setRes(null);
+    const who = to === "other" ? addr.trim() : to;
+    try {
+      const r = await fetch(`${AGENT}/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: `Send ${amt} ETH to ${who}`, planner: "scripted" }) });
+      const d = await r.json();
+      setRes(r.ok ? { ok: d.calls.at(-1)?.decision === "ALLOW", text: d.text } : { ok: false, text: d.detail || "error" });
+    } catch { setRes({ ok: false, text: "The agent API is not reachable." }); }
+    setBusy(false);
+  };
+  const mine = [...events].reverse().filter((x) => x.tool === "propose_transfer").slice(0, 5);
   return (
-    <Card title="Instant Swap · demo" right={<select className="mini" value={chain} onChange={(e) => setChain(e.target.value)}>{CHAINS.map((c) => <option key={c}>{c}</option>)}</select>}>
-      <label className="field"><span>You pay</span><div className="amt"><input value={amt} inputMode="decimal" onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ""))} />{sel(from, setFrom, to)}</div></label>
-      <button className="flip" onClick={flip} aria-label="Flip"><Icon n="swap" /></button>
-      <label className="field"><span>You receive (est.)</span><div className="amt"><input readOnly value={out ? fmt(out, to === "ETH" ? 5 : 2) : ""} />{sel(to, setTo, from)}</div></label>
-      <div className="kv"><span>Rate</span><b>1 {from} ≈ {fmt(rate, rate < 0.01 ? 6 : 4)} {to}</b></div>
-      <div className="kv"><span>Fee (0.3%)</span><b>{fmt((parseFloat(amt) || 0) * 0.003, 2)} {from}</b></div>
-      <button className="btn primary wide" disabled={!out} onClick={() => notify(`Demo: swapped ${amt} ${from} → ${fmt(out, 4)} ${to} on ${chain}`)}>Trade</button>
-    </Card>
-  );
-}
-
-/* ---------- FEATURE 3: limit orders ---------- */
-function LimitOrders({ ethPx, notify }) {
-  const [side, setSide] = useState("Buy"), [price, setPrice] = useState("2000"), [size, setSize] = useState("0.5"), [exp, setExp] = useState("GTC");
-  const [orders, setOrders] = useState([{ id: 1, side: "Buy", price: 2000, size: 1, exp: "7D", status: "open" }]);
-  useEffect(() => setOrders((o) => o.map((x) => x.status === "open" && (x.side === "Buy" ? ethPx <= x.price : ethPx >= x.price) ? { ...x, status: "filled" } : x)), [ethPx]);
-  const add = (e) => { e.preventDefault(); if (!+price || !+size) return;
-    setOrders((o) => [{ id: Date.now(), side, price: +price, size: +size, exp, status: "open" }, ...o]); notify(`Limit order placed: ${side} ${size} ETH @ $${price}`); };
-  return (
-    <Card title="Limit Orders · demo" right={<span className="muted">ETH ${fmt(ethPx)}</span>}>
-      <form onSubmit={add} className="grid2">
-        <div className="seg full">{["Buy", "Sell"].map((s) => <button type="button" key={s} className={`${side === s ? "on" : ""} ${s}`} onClick={() => setSide(s)}>{s}</button>)}</div>
-        <label className="field"><span>Trigger price (USD)</span><input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))} /></label>
-        <label className="field"><span>Amount (ETH)</span><input value={size} onChange={(e) => setSize(e.target.value.replace(/[^0-9.]/g, ""))} /></label>
-        <label className="field"><span>Expires</span><select value={exp} onChange={(e) => setExp(e.target.value)}>{["24H", "7D", "GTC"].map((x) => <option key={x}>{x}</option>)}</select></label>
-        <button className="btn primary">{side} ETH when price {side === "Buy" ? "≤" : "≥"} ${price || "—"}</button>
+    <Card title="Send ETH · real, through the Vault">
+      <form onSubmit={send}>
+        <label className="field"><span>Recipient</span>
+          <select value={to} onChange={(e) => setTo(e.target.value)}><option value="Alice">Alice (approved)</option><option value="Bob">Bob (approved)</option><option value="other">Other address (not approved)</option></select></label>
+        {to === "other" && <label className="field"><span>Address</span><input value={addr} onChange={(e) => setAddr(e.target.value)} placeholder="0x…" /></label>}
+        <label className="field"><span>Amount (ETH). Limits: 0.1 per transfer, 0.5 per day</span><input value={amt} inputMode="decimal" onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ""))} /></label>
+        <button className="btn primary wide" disabled={busy || !+amt}>{busy ? "Waiting for the Vault…" : `Send ${amt || "0"} ETH`}</button>
       </form>
-      <ul className="orders">
-        {orders.filter((o) => o.status !== "cancelled").map((o) => (
-          <li key={o.id}><span className={`tag ${o.side}`}>{o.side}</span><span>{o.size} ETH @ ${fmt(o.price, 0)}</span><span className="muted">{o.exp}</span><Chip s={o.status} />
-            {o.status === "open" && <button className="link" onClick={() => setOrders((l) => l.map((x) => x.id === o.id ? { ...x, status: "cancelled" } : x))}>Cancel</button>}</li>))}
-      </ul>
+      {res && <p className={`tres ${res.ok ? "up" : "down"}`}>{res.text}</p>}
+      <ul className="orders">{mine.length === 0 && <li className="muted">No transfers yet.</li>}
+        {mine.map((x) => <li key={x.seq}><span className="mono">{(x.args?.recipient || "").slice(0, 8)}…</span><span>{x.args?.amount} ETH</span><Chip s={taskStatus(x, txs)} /></li>)}</ul>
     </Card>
   );
 }
@@ -300,6 +285,27 @@ function AgentChat() {
   );
 }
 
+/* ---------- agent profile: live policy read through the Vault ---------- */
+function AgentProfile({ onClose }) {
+  const [p, setP] = useState(null), [err, setErr] = useState(null);
+  useEffect(() => { fetch(`${AGENT}/policy`).then(async (r) => (r.ok ? setP(await r.json()) : setErr((await r.json()).detail))).catch(() => setErr("The agent API is not reachable.")); }, []);
+  const eth = p?.limits?.ETH;
+  return (
+    <div className="pop" role="dialog">
+      <div className="card-h"><h3>crypto-agent</h3><button className="link" onClick={onClose}>Close</button></div>
+      {err && <p className="down">{err}</p>}{!p && !err && <p className="muted">Asking the Vault…</p>}
+      {p && <ul className="earn">
+        <li><b>Status</b><span className="grow" /><Chip s={p.agent_status === "active" ? "enforced" : "blocked"} /></li>
+        <li><b>Tools</b><span className="grow" /><span className="muted">{p.allowed_tools.join(", ")}</span></li>
+        <li><b>Assets</b><span className="grow" /><span>{p.allowed_assets.join(", ")}</span></li>
+        <li><b>Recipients</b><span className="grow" /><span>{Object.keys(p.allowed_recipients).join(", ")}</span></li>
+        {eth && <li><b>ETH limits</b><span className="grow" /><span>{eth.max_per_tx} per transfer · {eth.daily} per day</span></li>}
+        <li><b>Spent (24h)</b><span className="grow" /><span>{p.spent_last_24h?.ETH} ETH</span></li></ul>}
+      <small className="muted">Read live from the Vault gateway. The kill switch is the agent's status in the policy file.</small>
+    </div>
+  );
+}
+
 /* ---------- pages ---------- */
 function Overview({ v, w, notify }) {
   const secure = v.conn === "live";
@@ -315,7 +321,7 @@ function Overview({ v, w, notify }) {
     <Card title="Recent Submitter Actions"><LogsTable events={v.events} txs={v.txs} limit={5} /></Card>
   </>);
 }
-function Trading({ notify }) {
+function Trading({ events, txs }) {
   const [iv, setIv] = useState("1D");
   const [candles, setCandles] = useState(() => genCandles("1D"));
   useEffect(() => setCandles(genCandles(iv)), [iv]);
@@ -323,7 +329,7 @@ function Trading({ notify }) {
     const last = { ...cs[cs.length - 1] }, c = last.c * (1 + (Math.random() - 0.5) * CFG[iv].vol * 0.4);
     return [...cs.slice(0, -1), { ...last, c, h: Math.max(last.h, c), l: Math.min(last.l, c) }]; }), 2000); return () => clearInterval(id); }, [iv]);
   const px = candles[candles.length - 1].c;
-  return (<div className="trade"><CandleChart candles={candles} iv={iv} setIv={setIv} /><SwapCard ethPx={px} notify={notify} /><LimitOrders ethPx={px} notify={notify} /></div>);
+  return (<div className="trade"><CandleChart candles={candles} iv={iv} setIv={setIv} /><TransferCard events={events} txs={txs} /></div>);
 }
 function Analytics({ events }) {
   const denies = events.filter((e) => e.decision === "DENY");
@@ -347,7 +353,7 @@ function Security() {
 export default function App() {
   const v = useVault(), w = useWallet();
   const [page, setPage] = useState("overview");
-  const [wallet, setWallet] = useState(true), [toast, setToast] = useState(null), [seen, setSeen] = useState(0);
+  const [profile, setProfile] = useState(false), [wallet, setWallet] = useState(true), [toast, setToast] = useState(null), [seen, setSeen] = useState(0);
   const notify = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 3200); }, []);
   const critical = useMemo(() => v.events.filter((e) => e.severity === "critical").length, [v.events]);
   const unread = Math.max(0, critical - seen);
@@ -363,7 +369,7 @@ export default function App() {
         <header className="top">
           <h2>{title}</h2>
           <div className="top-r">
-            <span className="role">crypto-agent</span>
+            <button className="role" onClick={() => setProfile((x) => !x)} title="Agent policy and limits">crypto-agent ▾</button>
             <button className="icon-btn" aria-label="Alerts" onClick={() => { setSeen(critical); notify(unread ? `${unread} critical alert(s) cleared` : "No new alerts"); }}><Icon n="bell" />{unread > 0 && <i className="dotbadge">{unread}</i>}</button>
             <button className={`wallet ${wallet ? "on" : ""}`} onClick={() => setWallet(!wallet)}><Icon n="wallet" />{wallet ? `Vault wallet · ${shortAddr(w.signer)}` : "Connect Wallet"}</button>
             <button className="btn ghost sm" onClick={() => notify("Demo: signed out")}><Icon n="out" />Sign Out</button>
@@ -371,13 +377,14 @@ export default function App() {
         </header>
         <main className="content" key={page}>
           {page === "overview" && <Overview v={v} w={w} notify={notify} />}
-          {page === "agent" && <div className="grid2c"><AgentChat /><Feed events={v.events} txs={v.txs} /></div>}
-          {page === "trading" && <Trading notify={notify} />}
+          {page === "agent" && <div className="grid2c"><AgentChat /><div className="col"><WalletCard w={w} /><Feed events={v.events} txs={v.txs} /></div></div>}
+          {page === "trading" && <Trading events={v.events} txs={v.txs} />}
           {page === "analytics" && <Analytics events={v.events} />}
           {page === "logs" && <Card title="Submitter Execution Logs"><LogsTable events={v.events} txs={v.txs} /></Card>}
           {page === "security" && <Security />}
         </main>
       </div>
+      {profile && <AgentProfile onClose={() => setProfile(false)} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

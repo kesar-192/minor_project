@@ -34,6 +34,7 @@ async def lifespan(app):
     app.state.llm_ready = bool(llm.openrouter_api_key)
     params = mcp_params(attack_demo=True, env_file=str(ENV_FILE))
     async with Client(params) as client:
+        app.state.client = client
         app.state.sessions = {"scripted": AgentSession(ScriptedPlanner(), client, llm.max_steps, llm.max_lookups)}
         if app.state.llm_ready:
             app.state.sessions["llm"] = AgentSession(make_planner(llm), client, llm.max_steps, llm.max_lookups)
@@ -51,6 +52,16 @@ async def health():
 @app.get("/info")
 async def info():
     return {"llm_ready": app.state.llm_ready, "model": app.state.llm_model}
+
+
+@app.get("/policy")
+async def policy():
+    """The agent's own policy and limits, read through the same MCP -> Vault path as any tool call."""
+    outcome = await app.state.client.call_tool("get_policy_status", {})
+    body = outcome.structured_content
+    if not isinstance(body, dict) or body.get("decision") != "ALLOW":
+        raise HTTPException(502, (body or {}).get("reason") or "the Vault did not return the policy")
+    return body["result"]
 
 
 @app.post("/chat")

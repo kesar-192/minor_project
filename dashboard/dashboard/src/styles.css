@@ -65,3 +65,7 @@ input,select{width:100%;background:var(--panel2);border:1px solid var(--line);bo
 .msg{max-width:88%;padding:10px 14px;border-radius:14px;line-height:1.45;word-break:break-word}.msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}.msg.agent{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);border-bottom-left-radius:4px}
 .calls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.call{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:6px}.call.ok{background:rgba(24,194,122,.15);color:var(--up)}.call.no{background:rgba(240,82,92,.18);color:var(--down)}
 .chat-in{display:flex;gap:10px}.seg button:disabled{opacity:.4;cursor:not-allowed}
+
+.role{cursor:pointer;color:var(--text)}.role:hover{border-color:var(--blue2)}
+.pop{position:fixed;top:64px;right:28px;width:min(420px,calc(100vw - 28px));z-index:30;background:var(--panel);border:1px solid var(--blue2);border-radius:var(--r);padding:18px;box-shadow:0 14px 40px #000a;animation:fade .15s}
+.tres{margin:12px 0 0;font-size:13px;word-break:break-word}
