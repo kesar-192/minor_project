@@ -288,10 +288,11 @@ function AgentChat() {
 /* ---------- PHE: proof that encrypted balances and encrypted arithmetic really work ---------- */
 const Ct = ({ c }) => <code className="ct">{c.head}…{c.tail} <small>({c.digits} digits)</small></code>;
 function PhePage({ w }) {
-  const [st, setSt] = useState(null), [a, setA] = useState("150"), [b, setB] = useState("250"), [r, setR] = useState(null), [busy, setBusy] = useState(false);
+  const [st, setSt] = useState(null), [a, setA] = useState("150"), [b, setB] = useState("250"), [r, setR] = useState(null), [busy, setBusy] = useState(false), [err, setErr] = useState(null), [hist, setHist] = useState([]);
   useEffect(() => { const load = () => fetch("/api/phe/state").then((x) => x.json()).then(setSt).catch(() => setSt({ stored: null, down: true })); load(); const id = setInterval(load, 3000); return () => clearInterval(id); }, []);
-  const run = async (e) => { e.preventDefault(); setBusy(true);
-    try { setR(await (await fetch("/api/phe/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ a: +a, b: +b }) })).json()); } catch { setR(null); } setBusy(false); };
+  useEffect(() => { const v = st?.decrypted; if (v !== undefined) setHist((h) => (h[0]?.v === v ? h : [{ v, t: new Date().toLocaleTimeString() }, ...h].slice(0, 6))); }, [st?.decrypted]);
+  const run = async (e) => { e.preventDefault(); setBusy(true); setErr(null);
+    try { const x = await fetch("/api/phe/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ a: +a, b: +b }) }); if (!x.ok) throw new Error(x.status); setR(await x.json()); } catch (e2) { setR(null); setErr(`The PHE service did not answer (${e2.message}). Is it running?`); } setBusy(false); };
   const chain = w.bal.signer, phe = st?.decrypted !== undefined ? parseFloat(st.decrypted) : null;
   const match = phe !== null && chain !== undefined && Math.abs(phe - chain) < 0.0001;
   return (<div className="grid2c">
@@ -304,8 +305,12 @@ function PhePage({ w }) {
             <li><b>Decrypted by PHE (for the authorized requester only)</b><span className="grow" /><b>{st.decrypted} ETH</b></li>
             <li><b>Real balance on the chain right now</b><span className="grow" /><b>{chain === undefined ? "…" : `${fmt(chain, 6)} ETH`}</b></li>
             <li><b>Match</b><span className="grow" /><Chip s={match ? "enforced" : "pending"} /></li></ul>
-          <small className="muted">chain_sync.py encrypts the on-chain balance with the public key every 3 s. Send an ETH transfer on the Trading page and watch both numbers move together.</small>
+          <ul className="earn"><li><b>Sync</b><span className="grow" /><span className="muted">#{st.stored.syncs} · {Math.round(st.stored.age_seconds)}s ago (every 3 s)</span></li></ul>
+          <small className="muted">chain_sync.py re-encrypts the on-chain balance every 3 s. Paillier encryption is randomized, so the ciphertext above changes on every sync even when the balance does not. Send an ETH transfer on the Trading page and watch the decrypted value move with the chain. A blocked transfer moves no ETH, so it stays the same.</small>
         </> : <p className="empty">{st?.down ? "PHE service unreachable." : "Waiting for the first sync from the chain…"}</p>}
+      </Card>
+      <Card title="Balance history (decrypted by PHE, this session)">
+        <ul className="earn">{hist.map((h, i) => <li key={i}><span className="muted">{h.t}</span><span className="grow" /><b>{h.v} ETH</b>{i === 0 && <Chip s="enforced" />}</li>)}{hist.length === 0 && <li className="muted">Waiting…</li>}</ul>
       </Card>
       <Card title="2 · What the agent is allowed to see">
         <p className="muted hint">Ask the agent <b>"What is my ETH balance?"</b> on the Agent Chat page. The Vault asks PHE to decrypt, and the agent receives only this, never the ciphertext above or any history:</p>
@@ -319,6 +324,7 @@ function PhePage({ w }) {
         <label className="field"><span>b</span><input value={b} onChange={(e) => setB(e.target.value.replace(/\D/g, ""))} /></label>
         <button className="btn primary" disabled={busy || !a || !b}>{busy ? "Encrypting…" : "Encrypt, add, decrypt"}</button>
       </form>
+      {err && <p className="down">{err}</p>}
       {r && r.sum && <ul className="earn">
         <li><b>E(a)</b><span className="grow" /><Ct c={r.a} /></li>
         <li><b>E(b)</b><span className="grow" /><Ct c={r.b} /></li>

@@ -9,6 +9,7 @@ Demo scope: balances live in memory and are not tied to the chain. See
 vault_gateway/contracts/CHAIN_FED_BALANCE.md for the future chain-fed design.
 """
 
+import time
 from decimal import Decimal
 
 from phe_logic import (
@@ -28,7 +29,10 @@ class BalanceError(Exception):
 
 
 def set_balance(requester_id, asset, ciphertext, exponent, decimals=0):
+    previous = _STORE.get((requester_id, asset))
     _STORE[(requester_id, asset)] = {
+        "syncs": (previous["syncs"] if previous else 0) + 1,
+        "updated": time.time(),
         "ciphertext": str(ciphertext),
         "exponent": int(exponent),
         "decimals": int(decimals),

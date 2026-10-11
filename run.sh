@@ -18,6 +18,18 @@ stop_all() {   # each service runs in its own process group (see launch)
   done
 }
 
+# The policy keeps only the SHA-256 of the agent token (from .env), never the token itself.
+sync_policy_hash() {
+.venv/bin/python - <<'PY'
+import hashlib, re
+token = next(l.split("=", 1)[1].strip() for l in open(".env") if l.startswith("AGENT_TOKEN="))
+p = "vault_gateway/policy/policy.yaml"
+s = open(p).read()
+open(p, "w").write(re.sub(r'token_sha256: "[0-9a-f]*"', f'token_sha256: "{hashlib.sha256(token.encode()).hexdigest()}"', s, count=1))
+print("agent token hash synced into", p)
+PY
+}
+
 do_setup() {
 need curl "sudo apt install curl"; need unzip "sudo apt install unzip"; need git "sudo apt install git"
 need node "install Node 18+ (https://nodejs.org)"; need npm "install Node 18+"
@@ -68,15 +80,7 @@ if ! grep -qE '^AGENT_TOKEN=.+' .env; then
   TOKEN=$(.venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(32))')
   sed -i "s|^AGENT_TOKEN=.*|AGENT_TOKEN=$TOKEN|" .env
 fi
-# The policy keeps only the SHA-256 of the token, never the token.
-.venv/bin/python - <<'PY'
-import hashlib, re
-token = next(l.split("=", 1)[1].strip() for l in open(".env") if l.startswith("AGENT_TOKEN="))
-p = "vault_gateway/policy/policy.yaml"
-s = open(p).read()
-open(p, "w").write(re.sub(r'token_sha256: "[0-9a-f]*"', f'token_sha256: "{hashlib.sha256(token.encode()).hexdigest()}"', s, count=1))
-print("agent token set, its SHA-256 written to", p)
-PY
+sync_policy_hash
 
 touch .run/.setup-done
 
@@ -85,6 +89,7 @@ touch .run/.setup-done
 do_start() {
 [ -f .env ] && [ -x .venv/bin/python ] || { echo "Run ./run.sh setup first."; exit 1; }
 PY="$ROOT/.venv/bin/python"
+grep -qE '^AGENT_TOKEN=.+' .env && sync_policy_hash
 stop_all
 mkdir -p .run
 [ "${1:-}" = "--keep" ] || rm -f vault_gateway/data/vault.db

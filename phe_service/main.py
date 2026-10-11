@@ -1,4 +1,5 @@
 import os
+import time
 from fastapi import FastAPI, Header, HTTPException
 from phe_logic import (
     encrypt,
@@ -235,7 +236,7 @@ def demo_state(x_api_token: str = Header(default="")):
     if rec is None:
         return {"stored": None}
     return {
-        "stored": {**_shown(rec["ciphertext"]), "exponent": rec["exponent"]},
+        "stored": {**_shown(rec["ciphertext"]), "exponent": rec["exponent"], "syncs": rec["syncs"], "age_seconds": round(time.time() - rec["updated"], 1)},
         "decrypted": query_balance("user123", "ETH")["balance"],   # what the Vault passes to the agent
         "key_bits": public_key_bits(),
     }
