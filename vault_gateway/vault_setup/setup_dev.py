@@ -29,6 +29,20 @@ POLICY_NAME = "vault-gateway"
 FUNDING_WEI = 10 * 10**18  # 10 test ETH
 
 
+def update_env(path, values):
+    """Set KEY=value lines in the shared .env, keeping every other line as it is."""
+    lines = path.read_text().splitlines() if path.exists() else []
+    for key, value in values.items():
+        line = f"{key}={value}"
+        for i, existing in enumerate(lines):
+            if existing.startswith(f"{key}="):
+                lines[i] = line
+                break
+        else:
+            lines.append(line)
+    path.write_text("\n".join(lines) + "\n")
+
+
 def fail(message):
     print(f"FAIL  {message}")
     sys.exit(1)
@@ -39,7 +53,7 @@ def main():
     parser.add_argument("--vault-addr", default=os.environ.get("VAULT_ADDR", "http://127.0.0.1:8200"))
     parser.add_argument("--root-token", default="root", help="the dev server's root token")
     parser.add_argument("--rpc-url", default=os.environ.get("ETH_RPC_URL", "http://127.0.0.1:8545"))
-    parser.add_argument("--env-file", default=str(BASE_DIR / ".env"))
+    parser.add_argument("--env-file", default=str(BASE_DIR.parent / ".env"), help="the one root .env; only VAULT_ADDR, VAULT_TOKEN and ETH_RPC_URL are updated")
     opts = parser.parse_args()
 
     root = hvac.Client(url=opts.vault_addr, token=opts.root_token, timeout=5)
@@ -94,13 +108,11 @@ def main():
     print("OK    gateway token created, and Vault confirms it cannot export the key")
 
     # 6. Settings for the gateway. .env is in .gitignore: never commit it.
-    Path(opts.env_file).write_text(
-        f"VAULT_ADDR={opts.vault_addr}\nVAULT_TOKEN={token}\nETH_RPC_URL={opts.rpc_url}\n"
-    )
+    update_env(Path(opts.env_file), {"VAULT_ADDR": opts.vault_addr, "VAULT_TOKEN": token, "ETH_RPC_URL": opts.rpc_url})
     print(f"OK    settings saved to {opts.env_file}")
     print()
     print("Start the gateway:")
-    print("  .venv/bin/uvicorn app.main:create_app --factory --env-file .env --host 0.0.0.0 --port 8000")
+    print("  (or just run ./run.sh from the repo root)")
 
 
 if __name__ == "__main__":

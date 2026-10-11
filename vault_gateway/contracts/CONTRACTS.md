@@ -61,7 +61,7 @@
 
 | Tool | `args` | Gates that run | `result` when allowed |
 |---|---|---|---|
-| `get_balance` | `{"asset": "ETH"}` | 1–2 | Whatever the PHE service returns (open point 1). Refused with `EXECUTION_FAILED` until PHE is connected. |
+| `get_balance` | `{"asset": "ETH"}` | 1–2 | `{"asset": "ETH", "balance": "9.98"}` — a plain decimal total from the PHE service (`POST /balance/query`). Connected for the demo; see `contracts/CHAIN_FED_BALANCE.md`. |
 | `propose_transfer` | `{"asset", "amount", "recipient"}` | 1–6 | `{"tx_hash": "0x…", "status": "submitted" \| "submit_failed"}` |
 | `get_transaction_status` | `{"tx_hash": "0x…"}` | 1–2 | `{"tx_hash", "status": "pending" \| "confirmed" \| "failed" \| "not_found"}` |
 | `get_policy_status` | `{}` | 1–2 | `{"agent_status", "allowed_tools", "allowed_assets", "allowed_recipients", "limits", "spent_last_24h"}` |
@@ -248,7 +248,7 @@ The endpoints and fields are browsable at `http://<vault-host>:8000/docs`.
 
 ## 5. Open points to settle this week
 
-1. **`get_balance` and PHE (Members 1, 2).** Proposal: `get_balance` comes through the Vault like every other tool. After gates 1–2, the Vault calls the PHE service and passes its answer back unchanged. What the agent is allowed to see (a final authorised total, never raw ciphertext) is decided by Members 1 and 2. Member 1: please confirm PHE runs as its own FastAPI service, and send the endpoint and request shape.
+1. **`get_balance` and PHE (Members 1, 2) — connected for the demo.** The Vault calls the PHE service (`POST /balance/query`, settings `PHE_URL`/`PHE_API_TOKEN`) after gates 1–2 and passes its `{"asset", "balance"}` answer back unchanged. The balance is demo-seeded, not chain-fed: see `contracts/CHAIN_FED_BALANCE.md` for the future design.
 2. **USDC (Member 4).** ETH transfers are fully supported. USDC needs an ERC-20 token on Anvil. Either (a) you deploy a mock USDC and send me its address and decimals, or (b) we stay ETH-only for the 70% scope and USDC is removed from the allowed assets.
 3. **Session token (Member 2).** For the 70% scope, the agent gets one random token that lives in the MCP server's `.env`. The Vault stores only its SHA-256 hash. I'll generate it and send it privately. It never goes into git.
 4. **Integration machine (all).** Which laptop runs the full stack in Weeks 7–9? Every service listens on `0.0.0.0` and we connect over the LAN IP.

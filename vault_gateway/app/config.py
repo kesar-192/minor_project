@@ -23,6 +23,10 @@ class Settings:
     vault_token: str = field(default="", repr=False)  # never printed
     signer_address: str | None = None  # only needed if Vault holds more than one account
     submitter_url: str | None = None   # Member 4's submitter; unset = send straight to the chain
+    phe_url: str | None = None         # Member 1's PHE service; unset = get_balance fails closed
+    phe_api_token: str = field(default="", repr=False)  # never printed
+    phe_requester_id: str = "user123"
+    phe_timeout_seconds: float = 5.0
 
 
 def load_settings():
@@ -37,4 +41,8 @@ def load_settings():
         vault_token=os.environ.get("VAULT_TOKEN", ""),
         signer_address=os.environ.get("SIGNER_ADDRESS") or None,
         submitter_url=os.environ.get("SUBMITTER_URL") or None,
+        phe_url=os.environ.get("PHE_URL") or None,
+        phe_api_token=os.environ.get("PHE_API_TOKEN", ""),
+        phe_requester_id=os.environ.get("PHE_REQUESTER_ID", "user123"),
+        phe_timeout_seconds=float(os.environ.get("PHE_TIMEOUT_SECONDS", "5")),
     )

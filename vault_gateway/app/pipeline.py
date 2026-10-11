@@ -21,6 +21,7 @@ from .events import utc_now
 from .gates import REAL_GATES, STUB_GATES, Ctx, GateResult
 from .handoff import DirectSubmitter, HttpSubmitter
 from .models import ERROR_CODES, GATE_LABELS, SEVERITY, Check, Decision, ToolCall, describe_error
+from .phe import PheClient
 from .policy import PolicyError, PolicyStore
 from .signer import VaultSigner
 from .tools import TOOL_ARGS, TRANSFER_TOOLS, run_stub
@@ -95,12 +96,12 @@ def parse_request(body):
 class Gateway:
     """Tests pass fakes for chain, signer and submitter. Normally they are built from the settings."""
 
-    def __init__(self, settings, store, chain=None, signer=None, submitter=None):
+    def __init__(self, settings, store, chain=None, signer=None, submitter=None, phe=None):
         self.stub_mode = settings.stub_mode
         self.store = store
         self.gates = STUB_GATES if self.stub_mode else REAL_GATES
         self._transfer_lock = threading.Lock()
-        self.policies = self.chain = self.signer = self.sender = self.submitter = None
+        self.policies = self.chain = self.signer = self.sender = self.submitter = self.phe = None
         if self.stub_mode:
             return
         # Any of these can stop start-up: a bad policy file, no Vault, or a Vault
@@ -109,6 +110,11 @@ class Gateway:
         self.chain = chain or Chain(settings.eth_rpc_url)
         self.signer = signer or VaultSigner(settings.vault_addr, settings.vault_token, settings.signer_address)
         self.sender = self.signer.address
+        if phe:
+            self.phe = phe
+        elif settings.phe_url:
+            self.phe = PheClient(settings.phe_url, settings.phe_api_token,
+                                 settings.phe_requester_id, settings.phe_timeout_seconds)
         if submitter:
             self.submitter = submitter
         elif settings.submitter_url:
@@ -160,7 +166,8 @@ class Gateway:
                 checks.append(Check(gate="identity", passed=False, detail=result.detail))
                 return refuse(1, "identity", result)
 
-        ctx = Ctx(call=call, args=args, policy=policy, chain=self.chain, store=self.store, sender=self.sender)
+        ctx = Ctx(call=call, args=args, policy=policy, chain=self.chain, store=self.store,
+                  phe=self.phe, sender=self.sender)
         last_gate = 6 if call.tool in TRANSFER_TOOLS else LAST_READ_ONLY_GATE
         for number, name, gate in self.gates:
             if number > last_gate:

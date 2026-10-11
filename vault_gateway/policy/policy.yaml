@@ -13,7 +13,7 @@ agents:
 
     # SHA-256 of the agent's session token, never the token itself.
     # Make a token with: .venv/bin/python scripts/new_agent_token.py
-    token_sha256: ""
+    token_sha256: "19ac703d19ec623a063102048623724f98b965a7380a7d08e00b5a3332785ba2"
 
     allowed_tools:
       - get_balance
