@@ -24,8 +24,19 @@ def execute(ctx, signer, submitter):
         return Done({"tx_hash": ctx.args.tx_hash, "status": status}, f"Transaction status looked up: {status}")
     if tool == "get_policy_status":
         return Done(policy_status(ctx), "The agent read its own policy and limits")
-    # get_balance goes through Member 1's PHE service, which isn't connected yet (open point 1).
+    if tool == "get_balance":
+        return get_balance(ctx)
     raise NotImplementedError(f"{tool} is not available yet")
+
+
+def get_balance(ctx):
+    # The balance comes from Member 1's PHE service and nowhere else. If it is not
+    # configured, or does not answer with a plain decimal, this raises and the
+    # pipeline turns it into EXECUTION_FAILED: the Vault never invents a balance.
+    if ctx.phe is None:
+        raise NotImplementedError("the PHE service is not configured (set PHE_URL)")
+    result = ctx.phe.balance(ctx.args.asset)
+    return Done(result, f"{result['asset']} balance {result['balance']} (via the PHE service)")
 
 
 def transfer(ctx, signer, submitter):

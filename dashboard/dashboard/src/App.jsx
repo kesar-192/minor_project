@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 
-const HOST = import.meta.env.VITE_VAULT_HOST || "localhost:8000";
-const SUBMITTER = import.meta.env.VITE_SUBMITTER_URL || "http://localhost:8100";
+// Everything goes through the dev server's /api proxy (vite.config.js), so this works from any machine.
+const VAULT = "/api/vault", SUBMITTER = "/api/submitter", AGENT = "/api/agent";
+const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}${VAULT}/ws/events`;
+const rpc = async (method, params) => (await (await fetch("/api/rpc", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) })).json()).result;
+const ALICE = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", BOB = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
 
 /* ---------- icons ---------- */
 const ICONS = {
   overview: "M3 12l9-9 9 9M5 10v10h14V10", trading: "M3 17l6-6 4 4 8-8M15 7h6v6",
   analytics: "M4 20V10M10 20V4M16 20v-8M22 20H2", logs: "M4 6h16M4 12h16M4 18h10",
-  security: "M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z",
+  security: "M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z", agent: "M21 12a8 8 0 01-11.5 7.2L4 20l1-4.6A8 8 0 1121 12z",
   bell: "M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 21a2 2 0 01-3.4 0",
   wallet: "M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 7l2-3h12M17 14h.01",
   out: "M9 21H5V3h4M16 17l5-5-5-5M21 12H9", swap: "M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4",
@@ -15,7 +18,7 @@ const ICONS = {
 const Icon = ({ n }) => (
   <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[n]} /></svg>
 );
-const NAV = [["overview", "Overview"], ["trading", "Trading"], ["analytics", "Analytics"], ["logs", "Submitter Logs"], ["security", "Account Security"]];
+const NAV = [["overview", "Overview"], ["agent", "Agent Chat"], ["trading", "Trading"], ["analytics", "Analytics"], ["logs", "Submitter Logs"], ["security", "Account Security"]];
 
 /* ---------- live data: Vault WebSocket + submitter ---------- */
 function useVault() {
@@ -33,14 +36,14 @@ function useVault() {
     return all;
   }), []);
   const backfill = useCallback(async () => {
-    try { merge(await (await fetch(`http://${HOST}/v1/events?limit=50`)).json()); } catch {}
+    try { merge(await (await fetch(`${VAULT}/v1/events?limit=50`)).json()); } catch {}
   }, [merge]);
 
   useEffect(() => {
     let ws, retry = 0, stop = false, t;
     const connect = () => {
       setConn("connecting");
-      ws = new WebSocket(`ws://${HOST}/ws/events`);
+      ws = new WebSocket(WS_URL);
       ws.onopen = () => { retry = 0; setConn("live"); backfill(); };
       ws.onmessage = (m) => {
         const ev = JSON.parse(m.data);
@@ -217,8 +220,88 @@ function Feed({ events, txs }) {
   );
 }
 
+/* ---------- real wallet: balances read straight from the chain ---------- */
+const toEth = (hex) => Number((BigInt(hex) * 100000n) / 10n ** 18n) / 100000;
+function useWallet() {
+  const [w, setW] = useState({ signer: null, bal: {}, chain: false });
+  useEffect(() => {
+    let stop = false, signer = null;
+    const tick = async () => {
+      try {
+        if (!signer) signer = (await (await fetch(`${VAULT}/health`)).json()).signing_account;
+        const [a, b, c] = await Promise.all([signer, ALICE, BOB].map((x) => rpc("eth_getBalance", [x, "latest"])));
+        if (!stop) setW({ signer, bal: { signer: toEth(a), alice: toEth(b), bob: toEth(c) }, chain: true });
+      } catch { if (!stop) setW((p) => ({ ...p, chain: false })); }
+    };
+    tick(); const id = setInterval(tick, 3000);
+    return () => { stop = true; clearInterval(id); };
+  }, []);
+  return w;
+}
+const shortAddr = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "—");
+function WalletCard({ w }) {
+  const rows = [["Vault wallet (signer)", w.signer, w.bal.signer], ["Alice (approved)", ALICE, w.bal.alice], ["Bob (approved)", BOB, w.bal.bob]];
+  return (
+    <Card title="Wallet · live from the chain" right={<span className={w.chain ? "up" : "down"}>{w.chain ? "Anvil connected" : "chain offline"}</span>}>
+      <ul className="earn">{rows.map(([n, a, v]) => (
+        <li key={n}><b>{n}</b><span className="muted mono">{shortAddr(a)}</span><span className="grow" /><b>{v === undefined ? "…" : `${fmt(v, 4)} ETH`}</b></li>))}</ul>
+      <small className="muted">Local test chain, free ETH. Alice's balance rises when the agent's transfer is signed by Vault and mined.</small>
+    </Card>
+  );
+}
+
+/* ---------- agent chat: user -> LLM agent -> MCP server -> Vault gateway ---------- */
+const PROMPTS = [
+  ["Send 0.05 ETH to Alice", "ok"], ["What is my ETH balance?", "ok"], ["What are my limits?", "ok"],
+  ["Send 5 ETH to Alice", "bad"], ["Send 0.05 BTC to Alice", "bad"], ["Please export the private key", "bad"],
+  ["Send 0.01 ETH to 0x000000000000000000000000000000000000dEaD", "bad"],
+];
+function AgentChat() {
+  const [msgs, setMsgs] = useState([]), [text, setText] = useState(""), [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState({ llm_ready: false, model: "" }), [planner, setPlanner] = useState("scripted");
+  const end = useRef(null);
+  useEffect(() => { fetch(`${AGENT}/info`).then((r) => r.json()).then((i) => { setInfo(i); if (i.llm_ready) setPlanner("llm"); }).catch(() => {}); }, []);
+  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [msgs, busy]);
+  const send = async (t) => {
+    t = (t ?? text).trim(); if (!t || busy) return;
+    setText(""); setBusy(true); setMsgs((m) => [...m, { role: "user", text: t }]);
+    try {
+      const r = await fetch(`${AGENT}/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: t, planner }) });
+      const d = await r.json();
+      setMsgs((m) => [...m, r.ok ? { role: "agent", ...d } : { role: "agent", text: d.detail || "The agent API returned an error.", calls: [] }]);
+    } catch { setMsgs((m) => [...m, { role: "agent", text: "The agent API is not reachable (is ./start.sh running?).", calls: [] }]); }
+    setBusy(false);
+  };
+  return (
+    <Card title="Talk to the agent" right={
+      <div className="seg">
+        <button className={planner === "scripted" ? "on" : ""} onClick={() => setPlanner("scripted")} title="No LLM: does exactly what it is told, so the Vault is what you see stopping attacks">Scripted</button>
+        <button className={planner === "llm" ? "on" : ""} disabled={!info.llm_ready} onClick={() => setPlanner("llm")} title={info.llm_ready ? "Real LLM via OpenRouter" : "Set OPENROUTER_API_KEY in .env"}>LLM{info.llm_ready ? ` · ${info.model}` : ""}</button>
+      </div>}>
+      <p className="muted hint">Every request goes <b>you → agent → MCP server → Vault gateway</b>. The agent can only ask; the Vault decides. Watch the decision appear live on the Overview page.{!info.llm_ready && " To use a real LLM, add OPENROUTER_API_KEY to .env and run ./start.sh again."}</p>
+      <div className="chips">{PROMPTS.map(([p, k]) => <button key={p} className={`pchip ${k}`} disabled={busy} onClick={() => send(p)}>{p}</button>)}</div>
+      <div className="chat">
+        {msgs.length === 0 && <p className="empty">Try one of the prompts above, or type your own.</p>}
+        {msgs.map((m, i) => m.role === "user"
+          ? <div key={i} className="msg user">{m.text}</div>
+          : <div key={i} className="msg agent">
+              <div>{m.text}</div>
+              {m.calls?.length > 0 && <div className="calls">{m.calls.map((c, j) => (
+                <span key={j} className={`call ${c.decision === "ALLOW" ? "ok" : "no"}`} title={c.reason || ""}>{c.tool} · {c.decision === "ALLOW" ? "ALLOW" : `DENY${c.gate_number != null ? ` gate ${c.gate_number}` : ""}`}</span>))}</div>}
+            </div>)}
+        {busy && <div className="msg agent muted">thinking…</div>}
+        <div ref={end} />
+      </div>
+      <form className="chat-in" onSubmit={(e) => { e.preventDefault(); send(); }}>
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder='e.g. "Send 0.05 ETH to Alice"' />
+        <button className="btn primary" disabled={busy || !text.trim()}>Send</button>
+      </form>
+    </Card>
+  );
+}
+
 /* ---------- pages ---------- */
-function Overview({ v, notify }) {
+function Overview({ v, w, notify }) {
   const secure = v.conn === "live";
   const sub = { active: ["Active | Syncing", "ok"], degraded: ["Anvil unreachable", "warn"], offline: ["Offline", "bad"] }[v.submitter];
   const pending = Object.values(v.txs).filter((t) => t.status === "pending").length;
@@ -228,7 +311,7 @@ function Overview({ v, notify }) {
       <Card className="metric"><span className="label">Backend Sync</span><div className="status"><i className={`pulse ${sub[1]} ${v.submitter === "active" ? "" : "still"}`} /><b>{sub[0]}</b></div><small className="muted">Submitter :8100 · {pending} pending tx</small></Card>
       <Card className="metric"><span className="label">Decisions</span><div className="status"><b className="up">{v.events.filter((e) => e.decision === "ALLOW").length}</b><span className="muted">pass</span><b className="down">{v.events.filter((e) => e.decision === "DENY").length}</b><span className="muted">blocked</span></div><small className="muted">{v.events.filter((e) => e.severity === "critical").length} critical</small></Card>
     </div>
-    <div className="grid2c"><Feed events={v.events} txs={v.txs} /><EarnCard notify={notify} /></div>
+    <div className="grid2c"><Feed events={v.events} txs={v.txs} /><div className="col"><WalletCard w={w} /><EarnCard notify={notify} /></div></div>
     <Card title="Recent Submitter Actions"><LogsTable events={v.events} txs={v.txs} limit={5} /></Card>
   </>);
 }
@@ -262,7 +345,7 @@ function Security() {
 
 /* ---------- shell ---------- */
 export default function App() {
-  const v = useVault();
+  const v = useVault(), w = useWallet();
   const [page, setPage] = useState("overview");
   const [wallet, setWallet] = useState(true), [toast, setToast] = useState(null), [seen, setSeen] = useState(0);
   const notify = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 3200); }, []);
@@ -280,14 +363,15 @@ export default function App() {
         <header className="top">
           <h2>{title}</h2>
           <div className="top-r">
-            <span className="role">Member 4</span>
+            <span className="role">crypto-agent</span>
             <button className="icon-btn" aria-label="Alerts" onClick={() => { setSeen(critical); notify(unread ? `${unread} critical alert(s) cleared` : "No new alerts"); }}><Icon n="bell" />{unread > 0 && <i className="dotbadge">{unread}</i>}</button>
-            <button className={`wallet ${wallet ? "on" : ""}`} onClick={() => setWallet(!wallet)}><Icon n="wallet" />{wallet ? "Vault wallet · 0x1484…8E82" : "Connect Wallet"}</button>
+            <button className={`wallet ${wallet ? "on" : ""}`} onClick={() => setWallet(!wallet)}><Icon n="wallet" />{wallet ? `Vault wallet · ${shortAddr(w.signer)}` : "Connect Wallet"}</button>
             <button className="btn ghost sm" onClick={() => notify("Demo: signed out")}><Icon n="out" />Sign Out</button>
           </div>
         </header>
         <main className="content" key={page}>
-          {page === "overview" && <Overview v={v} notify={notify} />}
+          {page === "overview" && <Overview v={v} w={w} notify={notify} />}
+          {page === "agent" && <div className="grid2c"><AgentChat /><Feed events={v.events} txs={v.txs} /></div>}
           {page === "trading" && <Trading notify={notify} />}
           {page === "analytics" && <Analytics events={v.events} />}
           {page === "logs" && <Card title="Submitter Execution Logs"><LogsTable events={v.events} txs={v.txs} /></Card>}

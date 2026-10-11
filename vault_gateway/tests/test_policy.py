@@ -7,15 +7,9 @@ from app.policy import PolicyError, PolicyStore, load_policy
 from conftest import ALICE, policy_dict, write_policy, write_policy_text
 
 
-def test_shipped_policy_file_only_needs_a_token(tmp_path):
-    # policy/policy.yaml is complete except the token hash, which each machine fills in.
-    with pytest.raises(PolicyError, match="scripts/new_agent_token.py"):
-        load_policy(DEFAULT_POLICY_PATH)
-    shipped = yaml.safe_load(DEFAULT_POLICY_PATH.read_text())
-    shipped["agents"]["crypto-agent"]["token_sha256"] = "a" * 64
-    path = tmp_path / "policy.yaml"
-    write_policy(path, shipped)
-    agent = load_policy(path).agents["crypto-agent"]
+def test_shipped_policy_file_is_valid():
+    # setup.sh writes the real token hash into policy/policy.yaml, so the shipped file must load as it is.
+    agent = load_policy(DEFAULT_POLICY_PATH).agents["crypto-agent"]
     assert agent.allowed_assets == ["ETH"]
     assert agent.recipient_name(ALICE) == "Alice"
 

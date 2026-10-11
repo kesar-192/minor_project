@@ -181,6 +181,10 @@ Expected:
 | `POLICY_PATH` | `policy/policy.yaml` | |
 | `DB_PATH` | `data/vault.db` | Audit log and spend record |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Where the dashboard runs |
+| `PHE_URL` | unset | Member 1's PHE service, e.g. `http://127.0.0.1:8300`. Unset, `get_balance` fails closed. |
+| `PHE_API_TOKEN` | — | The PHE service token (required when `PHE_URL` is set) |
+| `PHE_REQUESTER_ID` | `user123` | Requester id the PHE balance is stored under |
+| `PHE_TIMEOUT_SECONDS` | `5` | PHE request timeout |
 
 ### Troubleshooting
 

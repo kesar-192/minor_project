@@ -1,0 +1,18 @@
+# One environment for every Python part of SecureAgent (vault_gateway, mcp_agent, phe_service, dashboard/submitter)
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+PyYAML==6.0.3
+eth-utils==6.0.0
+hvac==2.4.0
+web3==8.0.0
+httpx2==2.13.1
+websockets==17.2
+mcp==2.3.0
+python-dotenv==1.2.4
+anthropic==1.12.1
+openai==3.26.0
+phe
+requests
+pytest==9.1.1
+pytest-asyncio==1.4.0

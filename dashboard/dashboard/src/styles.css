@@ -57,3 +57,11 @@ input,select{width:100%;background:var(--panel2);border:1px solid var(--line);bo
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c2638;border:1px solid var(--blue2);padding:12px 20px;border-radius:12px;box-shadow:0 10px 30px #0008;animation:fade .2s;z-index:20}
 @media(max-width:1100px){.trade,.grid2c{grid-template-columns:1fr}.chart-card{grid-row:auto}.grid3{grid-template-columns:1fr}}
 @media(max-width:760px){.side{position:static;width:100%;flex-direction:row;overflow-x:auto;padding:10px}.app{flex-direction:column}.main{margin-left:0}.motto,.brand span:not(.logo){display:none}nav{flex-direction:row}nav button{white-space:nowrap}.top,.content{padding-left:14px;padding-right:14px}}
+
+/* agent chat + wallet */
+.col{display:flex;flex-direction:column;gap:18px}.grow{flex:1}.hint{margin:0 0 12px;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.pchip{border:1px solid var(--line);background:var(--panel2);border-radius:99px;padding:6px 12px;font-size:12.5px;transition:.15s}.pchip:hover:not(:disabled){border-color:var(--blue2)}.pchip.bad{border-color:rgba(240,82,92,.4)}.pchip.ok{border-color:rgba(24,194,122,.4)}.pchip:disabled{opacity:.5;cursor:wait}
+.chat{display:flex;flex-direction:column;gap:10px;height:340px;overflow-y:auto;padding:4px;margin-bottom:12px}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;line-height:1.45;word-break:break-word}.msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}.msg.agent{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);border-bottom-left-radius:4px}
+.calls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.call{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:6px}.call.ok{background:rgba(24,194,122,.15);color:var(--up)}.call.no{background:rgba(240,82,92,.18);color:var(--down)}
+.chat-in{display:flex;gap:10px}.seg button:disabled{opacity:.4;cursor:not-allowed}
