@@ -6,9 +6,10 @@ from phe_logic import (
     decrypt,
     ciphertext_to_dict,
     dict_to_ciphertext,
-    get_public_key
+    get_public_key,
+    public_key
 )
-from balance_store import BalanceError, query_balance, set_balance
+from balance_store import BalanceError, query_balance, record, set_balance
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -214,3 +215,44 @@ def balance_query(
             status_code=error.status_code,
             detail=error.detail
         )
+
+
+def public_key_bits():
+    return public_key.n.bit_length()
+
+
+# ---- Dashboard demo: shows that PHE really works (the dashboard proxy adds the token, see vite.config.js) ----
+
+def _shown(ciphertext):
+    text = str(ciphertext)
+    return {"head": text[:24], "tail": text[-8:], "digits": len(text)}
+
+
+@app.get("/demo/state")
+def demo_state(x_api_token: str = Header(default="")):
+    verify_api_token(x_api_token)
+    rec = record("user123", "ETH")
+    if rec is None:
+        return {"stored": None}
+    return {
+        "stored": {**_shown(rec["ciphertext"]), "exponent": rec["exponent"]},
+        "decrypted": query_balance("user123", "ETH")["balance"],   # what the Vault passes to the agent
+        "key_bits": public_key_bits(),
+    }
+
+
+class DemoAdd(BaseModel):
+    a: int = Field(ge=0, le=10**12)
+    b: int = Field(ge=0, le=10**12)
+
+
+@app.post("/demo/add")
+def demo_add(req: DemoAdd, x_api_token: str = Header(default="")):
+    """Encrypt a and b, add the two ciphertexts WITHOUT decrypting, then decrypt only the total."""
+    verify_api_token(x_api_token)
+    ea, eb = encrypt(req.a), encrypt(req.b)
+    total = add([ea, eb])
+    return {
+        "a": _shown(ea.ciphertext()), "b": _shown(eb.ciphertext()), "sum": _shown(total.ciphertext()),
+        "decrypted_sum": decrypt(total, "user123"), "expected": req.a + req.b,
+    }

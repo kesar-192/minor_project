@@ -10,7 +10,7 @@ const ALICE = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", BOB = "0x3C44CdDdB6a
 const ICONS = {
   overview: "M3 12l9-9 9 9M5 10v10h14V10", trading: "M3 17l6-6 4 4 8-8M15 7h6v6",
   analytics: "M4 20V10M10 20V4M16 20v-8M22 20H2", logs: "M4 6h16M4 12h16M4 18h10",
-  security: "M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z", agent: "M21 12a8 8 0 01-11.5 7.2L4 20l1-4.6A8 8 0 1121 12z",
+  security: "M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z", phe: "M5 11h14v10H5zM8 11V7a4 4 0 018 0v4", agent: "M21 12a8 8 0 01-11.5 7.2L4 20l1-4.6A8 8 0 1121 12z",
   bell: "M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 21a2 2 0 01-3.4 0",
   wallet: "M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 7l2-3h12M17 14h.01",
   out: "M9 21H5V3h4M16 17l5-5-5-5M21 12H9", swap: "M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4",
@@ -18,7 +18,7 @@ const ICONS = {
 const Icon = ({ n }) => (
   <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[n]} /></svg>
 );
-const NAV = [["overview", "Overview"], ["agent", "Agent Chat"], ["trading", "Trading"], ["analytics", "Analytics"], ["logs", "Submitter Logs"], ["security", "Account Security"]];
+const NAV = [["overview", "Overview"], ["agent", "Agent Chat"], ["phe", "Privacy (PHE)"], ["trading", "Trading"], ["analytics", "Analytics"], ["logs", "Submitter Logs"], ["security", "Account Security"]];
 
 /* ---------- live data: Vault WebSocket + submitter ---------- */
 function useVault() {
@@ -285,6 +285,49 @@ function AgentChat() {
   );
 }
 
+/* ---------- PHE: proof that encrypted balances and encrypted arithmetic really work ---------- */
+const Ct = ({ c }) => <code className="ct">{c.head}…{c.tail} <small>({c.digits} digits)</small></code>;
+function PhePage({ w }) {
+  const [st, setSt] = useState(null), [a, setA] = useState("150"), [b, setB] = useState("250"), [r, setR] = useState(null), [busy, setBusy] = useState(false);
+  useEffect(() => { const load = () => fetch("/api/phe/state").then((x) => x.json()).then(setSt).catch(() => setSt({ stored: null, down: true })); load(); const id = setInterval(load, 3000); return () => clearInterval(id); }, []);
+  const run = async (e) => { e.preventDefault(); setBusy(true);
+    try { setR(await (await fetch("/api/phe/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ a: +a, b: +b }) })).json()); } catch { setR(null); } setBusy(false); };
+  const chain = w.bal.signer, phe = st?.decrypted !== undefined ? parseFloat(st.decrypted) : null;
+  const match = phe !== null && chain !== undefined && Math.abs(phe - chain) < 0.0001;
+  return (<div className="grid2c">
+    <div className="col">
+      <Card title="1 · The balance is stored encrypted" right={st?.stored ? <span className="up">Paillier · {st.key_bits}-bit key</span> : <span className="down">no balance yet</span>}>
+        {st?.stored ? <>
+          <p className="muted hint">This is all the PHE service stores for the Vault wallet's ETH balance. It is a ciphertext, so it tells you nothing without the private key:</p>
+          <Ct c={st.stored} />
+          <ul className="earn">
+            <li><b>Decrypted by PHE (for the authorized requester only)</b><span className="grow" /><b>{st.decrypted} ETH</b></li>
+            <li><b>Real balance on the chain right now</b><span className="grow" /><b>{chain === undefined ? "…" : `${fmt(chain, 6)} ETH`}</b></li>
+            <li><b>Match</b><span className="grow" /><Chip s={match ? "enforced" : "pending"} /></li></ul>
+          <small className="muted">chain_sync.py encrypts the on-chain balance with the public key every 3 s. Send an ETH transfer on the Trading page and watch both numbers move together.</small>
+        </> : <p className="empty">{st?.down ? "PHE service unreachable." : "Waiting for the first sync from the chain…"}</p>}
+      </Card>
+      <Card title="2 · What the agent is allowed to see">
+        <p className="muted hint">Ask the agent <b>"What is my ETH balance?"</b> on the Agent Chat page. The Vault asks PHE to decrypt, and the agent receives only this, never the ciphertext above or any history:</p>
+        <code className="ct">{`{"asset": "ETH", "balance": "${st?.decrypted ?? "…"}"}`}</code>
+      </Card>
+    </div>
+    <Card title="3 · Math on encrypted numbers">
+      <p className="muted hint">Homomorphic: <b>E(a) + E(b) = E(a + b)</b>. The service adds the two ciphertexts without ever decrypting them; only the final total is decrypted.</p>
+      <form onSubmit={run} className="grid2">
+        <label className="field"><span>a</span><input value={a} onChange={(e) => setA(e.target.value.replace(/\D/g, ""))} /></label>
+        <label className="field"><span>b</span><input value={b} onChange={(e) => setB(e.target.value.replace(/\D/g, ""))} /></label>
+        <button className="btn primary" disabled={busy || !a || !b}>{busy ? "Encrypting…" : "Encrypt, add, decrypt"}</button>
+      </form>
+      {r && r.sum && <ul className="earn">
+        <li><b>E(a)</b><span className="grow" /><Ct c={r.a} /></li>
+        <li><b>E(b)</b><span className="grow" /><Ct c={r.b} /></li>
+        <li><b>E(a) + E(b)</b><span className="grow" /><Ct c={r.sum} /></li>
+        <li><b>Decrypted total</b><span className="grow" /><b className={r.decrypted_sum === r.expected ? "up" : "down"}>{r.decrypted_sum} {r.decrypted_sum === r.expected ? `= ${a} + ${b} ✓` : "✗"}</b></li></ul>}
+    </Card>
+  </div>);
+}
+
 /* ---------- agent profile: live policy read through the Vault ---------- */
 function AgentProfile({ onClose }) {
   const [p, setP] = useState(null), [err, setErr] = useState(null);
@@ -377,6 +420,7 @@ export default function App() {
         </header>
         <main className="content" key={page}>
           {page === "overview" && <Overview v={v} w={w} notify={notify} />}
+          {page === "phe" && <PhePage w={w} />}
           {page === "agent" && <div className="grid2c"><AgentChat /><div className="col"><WalletCard w={w} /><Feed events={v.events} txs={v.txs} /></div></div>}
           {page === "trading" && <Trading events={v.events} txs={v.txs} />}
           {page === "analytics" && <Analytics events={v.events} />}

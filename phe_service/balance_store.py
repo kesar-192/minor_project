@@ -49,6 +49,11 @@ def query_balance(requester_id, asset):
     return {"asset": asset, "balance": format_units(value, record["decimals"])}
 
 
+def record(requester_id, asset):
+    """The stored ciphertext record (what the store really holds), or None. For the dashboard demo."""
+    return _STORE.get((requester_id, asset))
+
+
 def format_units(value, decimals):
     """An integer in the smallest unit written as a trimmed decimal string."""
     if decimals <= 0:

@@ -69,3 +69,4 @@ input,select{width:100%;background:var(--panel2);border:1px solid var(--line);bo
 .role{cursor:pointer;color:var(--text)}.role:hover{border-color:var(--blue2)}
 .pop{position:fixed;top:64px;right:28px;width:min(420px,calc(100vw - 28px));z-index:30;background:var(--panel);border:1px solid var(--blue2);border-radius:var(--r);padding:18px;box-shadow:0 14px 40px #000a;animation:fade .15s}
 .tres{margin:12px 0 0;font-size:13px;word-break:break-word}
+.ct{display:block;word-break:break-all;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:12px ui-monospace,Menlo,monospace;margin:6px 0}.ct small{color:var(--mute)}.earn .ct{margin:0;text-align:right}

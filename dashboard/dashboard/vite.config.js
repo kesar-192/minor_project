@@ -13,6 +13,8 @@ export default defineConfig({
       "^/api/vault/": { ...to("http://127.0.0.1:8000", true), rewrite: (p) => p.replace(/^\/api\/vault/, "") },
       "^/api/submitter/": { ...to("http://127.0.0.1:8100"), rewrite: (p) => p.replace(/^\/api\/submitter/, "") },
       "^/api/agent/": { ...to("http://127.0.0.1:8500"), rewrite: (p) => p.replace(/^\/api\/agent/, "") },
+      // Only the two read-only demo routes of the PHE service, with its token added here (never in the browser).
+      "^/api/phe/": { ...to("http://127.0.0.1:8300"), rewrite: (p) => p.replace(/^\/api\/phe/, "/demo"), headers: { "x-api-token": process.env.PHE_API_TOKEN || "" } },
       "^/api/rpc$": { ...to("http://127.0.0.1:8545"), rewrite: () => "/" },
     },
   },

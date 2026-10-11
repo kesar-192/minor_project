@@ -40,6 +40,8 @@ or browse straight to `http://<vm-ip>:5173`. Only port 5173 is exposed; the dash
 ## Using the dashboard
 
 - **Agent Chat** — talk to the agent (`you → agent → MCP server → Vault gateway`). Click the green prompts for allowed requests and the red ones for attacks (too much ETH, wrong asset, private-key request, unknown recipient). The Vault's decision shows up live next to the chat.
+- **Privacy (PHE)** — proof the encrypted balance works: the stored ciphertext, its decrypted value next to the real chain balance (with a match badge), what the agent is allowed to see, and a live "E(a) + E(b) = E(a+b)" demo. Send a transfer on **Trading** and watch the encrypted balance change.
+- **Trading** — a real "Send ETH" form (you → agent → Vault → chain). The price chart is simulated.
 - **Overview** — live decision feed, real wallet balances read from the chain (Alice's balance rises after an approved transfer), transaction status.
 - **Submitter Logs / Account Security / Analytics** — real data from the gateway and submitter.
 - Trading / Earn / swap widgets are demo data and labelled as such.
