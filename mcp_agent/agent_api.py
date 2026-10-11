@@ -57,7 +57,7 @@ async def info():
 async def chat(req: Chat):
     session = app.state.sessions.get(req.planner)
     if session is None:
-        raise HTTPException(400, "No LLM is configured: set OPENROUTER_API_KEY in .env and restart ./start.sh"
+        raise HTTPException(400, "No LLM is configured: set OPENROUTER_API_KEY in .env and restart ./run.sh start"
                             if req.planner == "llm" else f"unknown planner {req.planner!r}")
     result = await session.handle(req.message)
     return {

@@ -107,7 +107,7 @@ function CandleChart({ candles, iv, setIv }) {
     setHover(i >= 0 && i < candles.length ? i : null);
   };
   return (
-    <Card className="chart-card" title="ETH / USD" right={
+    <Card className="chart-card" title="ETH / USD · demo data" right={
       <div className="seg">{Object.keys(CFG).map((k) => <button key={k} className={iv === k ? "on" : ""} onClick={() => setIv(k)}>{k}</button>)}</div>}>
       <div className="px-row">
         <span className="px">${fmt(candles[candles.length - 1].c)}</span>
@@ -137,7 +137,7 @@ function SwapCard({ ethPx, notify }) {
   const flip = () => { setFrom(to); setTo(from); };
   const sel = (v, set, other) => <select value={v} onChange={(e) => e.target.value === other ? flip() : set(e.target.value)}>{Object.keys(px).map((t) => <option key={t}>{t}</option>)}</select>;
   return (
-    <Card title="Instant Swap" right={<select className="mini" value={chain} onChange={(e) => setChain(e.target.value)}>{CHAINS.map((c) => <option key={c}>{c}</option>)}</select>}>
+    <Card title="Instant Swap · demo" right={<select className="mini" value={chain} onChange={(e) => setChain(e.target.value)}>{CHAINS.map((c) => <option key={c}>{c}</option>)}</select>}>
       <label className="field"><span>You pay</span><div className="amt"><input value={amt} inputMode="decimal" onChange={(e) => setAmt(e.target.value.replace(/[^0-9.]/g, ""))} />{sel(from, setFrom, to)}</div></label>
       <button className="flip" onClick={flip} aria-label="Flip"><Icon n="swap" /></button>
       <label className="field"><span>You receive (est.)</span><div className="amt"><input readOnly value={out ? fmt(out, to === "ETH" ? 5 : 2) : ""} />{sel(to, setTo, from)}</div></label>
@@ -156,7 +156,7 @@ function LimitOrders({ ethPx, notify }) {
   const add = (e) => { e.preventDefault(); if (!+price || !+size) return;
     setOrders((o) => [{ id: Date.now(), side, price: +price, size: +size, exp, status: "open" }, ...o]); notify(`Limit order placed: ${side} ${size} ETH @ $${price}`); };
   return (
-    <Card title="Limit Orders" right={<span className="muted">ETH ${fmt(ethPx)}</span>}>
+    <Card title="Limit Orders · demo" right={<span className="muted">ETH ${fmt(ethPx)}</span>}>
       <form onSubmit={add} className="grid2">
         <div className="seg full">{["Buy", "Sell"].map((s) => <button type="button" key={s} className={`${side === s ? "on" : ""} ${s}`} onClick={() => setSide(s)}>{s}</button>)}</div>
         <label className="field"><span>Trigger price (USD)</span><input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))} /></label>
@@ -179,7 +179,7 @@ function EarnCard({ notify }) {
   const rows = STAKES.map((s) => ({ ...s, value: s.staked * s.usd, earned: s.staked * s.usd * (s.apy / 100) * 0.31 }));
   const total = rows.reduce((a, r) => a + r.value, 0), earned = rows.reduce((a, r) => a + r.earned, 0);
   return (
-    <Card title="Earn Rewards" right={<button className="btn ghost sm" onClick={() => notify(`Demo: claimed $${fmt(earned)} rewards`)}>Claim</button>}>
+    <Card title="Earn Rewards · demo data" right={<button className="btn ghost sm" onClick={() => notify(`Demo: claimed $${fmt(earned)} rewards`)}>Claim</button>}>
       <div className="big">${fmt(earned)}<small>total APY rewards earned</small></div>
       <div className="stack">{rows.map((r) => <i key={r.sym} className={r.sym} style={{ width: `${(r.value / total) * 100}%` }} title={r.sym} />)}</div>
       <ul className="earn">{rows.map((r) => (
@@ -269,7 +269,7 @@ function AgentChat() {
       const r = await fetch(`${AGENT}/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: t, planner }) });
       const d = await r.json();
       setMsgs((m) => [...m, r.ok ? { role: "agent", ...d } : { role: "agent", text: d.detail || "The agent API returned an error.", calls: [] }]);
-    } catch { setMsgs((m) => [...m, { role: "agent", text: "The agent API is not reachable (is ./start.sh running?).", calls: [] }]); }
+    } catch { setMsgs((m) => [...m, { role: "agent", text: "The agent API is not reachable (is ./run.sh running?).", calls: [] }]); }
     setBusy(false);
   };
   return (
@@ -278,7 +278,7 @@ function AgentChat() {
         <button className={planner === "scripted" ? "on" : ""} onClick={() => setPlanner("scripted")} title="No LLM: does exactly what it is told, so the Vault is what you see stopping attacks">Scripted</button>
         <button className={planner === "llm" ? "on" : ""} disabled={!info.llm_ready} onClick={() => setPlanner("llm")} title={info.llm_ready ? "Real LLM via OpenRouter" : "Set OPENROUTER_API_KEY in .env"}>LLM{info.llm_ready ? ` · ${info.model}` : ""}</button>
       </div>}>
-      <p className="muted hint">Every request goes <b>you → agent → MCP server → Vault gateway</b>. The agent can only ask; the Vault decides. Watch the decision appear live on the Overview page.{!info.llm_ready && " To use a real LLM, add OPENROUTER_API_KEY to .env and run ./start.sh again."}</p>
+      <p className="muted hint">Every request goes <b>you → agent → MCP server → Vault gateway</b>. The agent can only ask; the Vault decides. Watch the decision appear live on the Overview page.{!info.llm_ready && " To use a real LLM, add OPENROUTER_API_KEY to .env and run ./run.sh start again."}</p>
       <div className="chips">{PROMPTS.map(([p, k]) => <button key={p} className={`pchip ${k}`} disabled={busy} onClick={() => send(p)}>{p}</button>)}</div>
       <div className="chat">
         {msgs.length === 0 && <p className="empty">Try one of the prompts above, or type your own.</p>}
