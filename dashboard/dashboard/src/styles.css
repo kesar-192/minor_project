@@ -1,0 +1,20 @@
+:root{--bg:#0d1117;--card:#161b22;--text:#e6edf3;--mute:#8b949e;--pass:#2ea043;--block:#f85149;--warn:#d29922}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,sans-serif}
+.page{max-width:900px;margin:0 auto;padding:24px 16px}
+header{display:flex;justify-content:space-between;align-items:center}h1{margin:0}.motto{margin:2px 0 16px;color:var(--mute)}
+.pill{padding:4px 12px;border-radius:99px;font-size:12px;background:var(--card);border:1px solid var(--mute)}
+.pill.live{border-color:var(--pass);color:var(--pass)}.pill.reconnecting{border-color:var(--warn);color:var(--warn)}
+.stats{display:flex;gap:12px;margin-bottom:16px}.stat{flex:1;background:var(--card);border-radius:8px;padding:12px;font-size:28px;font-weight:700}
+.stat small{display:block;font-size:11px;color:var(--mute);font-weight:400}.stat.pass{color:var(--pass)}.stat.block,.stat.crit{color:var(--block)}
+.card{background:var(--card);border-left:4px solid;border-radius:6px;padding:10px 14px;margin-bottom:8px;cursor:pointer}
+.card.pass{border-color:var(--pass)}.card.block{border-color:var(--block)}.card.warning{border-color:var(--warn)}
+.card.critical{background:#3a1519;box-shadow:0 0 0 1px var(--block);animation:pulse 1.2s 2}
+@keyframes pulse{50%{box-shadow:0 0 14px var(--block)}}
+.row{display:flex;gap:10px;align-items:center}.row time{margin-left:auto;color:var(--mute)}.args{color:var(--mute);font-size:12px}
+.badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:var(--pass);color:#fff}
+.block .badge{background:var(--block)}.reason{margin-top:6px}.gate{color:var(--warn);font-weight:600;margin-right:8px}
+.tx{display:inline-block;margin-top:6px;font-size:12px;padding:2px 8px;border-radius:4px;background:#30363d}
+.tx.confirmed{background:var(--pass)}.tx.failed{background:var(--block)}.tx code{margin-left:8px;opacity:.8}
+.detail{margin-top:8px;border-top:1px solid #30363d;padding-top:8px}.chain{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.chain span{padding:2px 8px;border-radius:4px;font-size:12px}.chain .ok{background:#12351c}.chain .no{background:#4a1a1d}
+.empty{color:var(--mute);text-align:center;padding:40px}small{color:var(--mute)}
