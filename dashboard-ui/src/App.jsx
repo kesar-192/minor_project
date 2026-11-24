@@ -296,7 +296,7 @@ function AgentChat() {
       const r = await fetch(`${AGENT}/chat`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: t, planner }) });
       const d = await r.json();
       setMsgs((m) => [...m, r.ok ? { role: "agent", ...d } : { role: "agent", text: d.detail || "The agent API returned an error.", calls: [] }]);
-    } catch { setMsgs((m) => [...m, { role: "agent", text: "The agent API is not reachable (is ./start.sh running?).", calls: [] }]); }
+    } catch { setMsgs((m) => [...m, { role: "agent", text: "The agent API is not reachable (is ./run.sh running?).", calls: [] }]); }
     setBusy(false);
   };
   return (
@@ -305,7 +305,7 @@ function AgentChat() {
         <button className={planner === "scripted" ? "on" : ""} onClick={() => setPlanner("scripted")} title="No LLM: does exactly what it is told, so the Vault is what you see stopping attacks">Scripted</button>
         <button className={planner === "llm" ? "on" : ""} disabled={!info.llm_ready} onClick={() => setPlanner("llm")} title={info.llm_ready ? "Real LLM via OpenRouter" : "Set OPENROUTER_API_KEY in .env"}>LLM{info.llm_ready ? ` · ${info.model}` : ""}</button>
       </div>}>
-      <p className="muted hint">Every request goes <b>you → agent → MCP server → Vault gateway</b>. The agent can only ask; the Vault decides. Watch the decision appear live on the Overview page.{!info.llm_ready && " To use a real LLM, add OPENROUTER_API_KEY to .env and run ./start.sh again."}</p>
+      <p className="muted hint">Every request goes <b>you → agent → MCP server → Vault gateway</b>. The agent can only ask; the Vault decides. Watch the decision appear live on the Overview page.{!info.llm_ready && " To use a real LLM, add OPENROUTER_API_KEY to .env and run ./run.sh start again."}</p>
       <div className="chips">{PROMPTS.map(([p, k]) => <button key={p} className={`pchip ${k}`} disabled={busy} onClick={() => send(p)}>{p}</button>)}</div>
       <div className="chat">
         {msgs.length === 0 && <p className="empty">Try one of the prompts above, or type your own.</p>}

@@ -1,8 +1,9 @@
+import os
 import requests
 from phe import paillier
 
-BASE_URL = "http://127.0.0.1:8000"
-API_TOKEN = "my-local-test-token-123"
+BASE_URL = os.environ.get("PHE_URL", "http://127.0.0.1:8300")
+API_TOKEN = os.environ.get("PHE_API_TOKEN", "dev-token")
 
 response = requests.get(
     f"{BASE_URL}/public-key",

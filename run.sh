@@ -57,7 +57,7 @@ fi
 ls -la "$PLUGIN"
 
 say "Dashboard packages (npm)"
-(cd dashboard/dashboard
+(cd dashboard-ui
  # node_modules copied from another machine has broken launchers: reinstall if vite does not run.
  ./node_modules/.bin/vite --version >/dev/null 2>&1 || rm -rf node_modules
  npm install --no-audit --no-fund --loglevel=error)
@@ -127,7 +127,7 @@ wait_for submitter "http://127.0.0.1:8100/health"
 launch agent_api mcp_agent env -u AGENT_TOKEN SECUREAGENT_ENV_FILE="$ROOT/.env" "$PY" -m uvicorn agent_api:app --host 127.0.0.1 --port 8500
 wait_for agent_api "http://127.0.0.1:8500/health"
 
-launch dashboard dashboard/dashboard ./node_modules/.bin/vite --host 0.0.0.0 --port 5173 --strictPort
+launch dashboard dashboard-ui ./node_modules/.bin/vite --host 0.0.0.0 --port 5173 --strictPort
 wait_for dashboard "http://127.0.0.1:5173/"
 
 IPS=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.' | grep -v '^172\.1[78]\.' | head -3)

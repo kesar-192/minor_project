@@ -16,3 +16,4 @@ vault_gateway/data/
 # Node
 dashboard/dashboard/node_modules/
 dist/
+phe_service/phe_keys.json
